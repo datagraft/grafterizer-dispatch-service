@@ -15,7 +15,7 @@ const simpleOAuth2 = require('simple-oauth2');
 // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
 
 // Mozilla client sessions is a middleware
-// storing encrypted sessino data in a cookie
+// storing encrypted session data in a cookie
 const sessions = require('client-sessions');
 
 // Import extend utility from default nodejs packages
