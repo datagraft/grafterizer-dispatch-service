@@ -52,9 +52,27 @@ The component has been packaged in a [Docker](https://www.docker.com/) container
 Official Docker container on DockerHub
 Build and run Docker container
 -->
-In the folder where you cloned the project:
+In the folder where you cloned the project, build the image:
 ```
     docker build -t grafterizer-dispatch-service .
+```
+Then run it in the host networking stack using the parameters for [security](#security) and the URLs of the necessary components:
+
+```
+    docker run \
+      --net host \
+      --name grafterizer-dispatch-service \
+      -p <dispatcher service port>:8082 \
+      -e COOKIE_STORE_SECRET=randomlongstring \
+      -e OAUTH2_CLIENT_ID=clientidfromdatagraft \
+      -e OAUTH2_CLIENT_SECRET=clientsecretfromdatagraft \
+      -e DATAGRAFT_URI=http://<DataGraft platform URL>:<DataGraft platform port> \
+      -e CORS_ORIGIN=http://<grafterizer URL>:<grafterizer port> \
+      -e GRAFTWERK_URI=http://<graftwerk URL>:<graftwerk port> \
+      -e GRAFTWERK_CACHE_URI=http://<graftwerk cache URL>:<graftwerk cache port> \
+      -e PUBLIC_CALLBACK_SERVER=http://<dispatcher service URL>:<dispatcher service port> \
+      -e PUBLIC_OAUTH2_SITE=http://<DataGraft platform URL>:<DataGraft platform port> \
+      -d grafterizer-dispatch-service 
 ```
 <!---
 ## Usage
