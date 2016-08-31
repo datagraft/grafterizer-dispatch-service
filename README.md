@@ -27,7 +27,6 @@ The component has been packaged in a [Docker](https://www.docker.com/) container
  1. Install project dependencies using the Node package manager
    ```
    npm install
-
    ```
  1. Set the environmental variables for the service. That includes the setup for the [security](#security) features and the URLs (accessible over the Internet) of the DataGraft platform, [Grafterizer](https://github.com/datagraft/grafterizer), [Graftwerk](https://github.com/datagraft/graftwerk) (or [Graftwerk load balancer](https://github.com/datagraft/graftwerk-load-balancer)), and [Graftwerk cache](https://github.com/datagraft/graftwerk-cache).
  
