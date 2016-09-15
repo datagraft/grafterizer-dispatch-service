@@ -37,7 +37,7 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-mocha');
   grunt.loadNpmTasks('grunt-newer');
 
-  grunt.registerTask('test', [
+  grunt.registerTask('check', [
       'jscs:all',
       'jshint:all'
   ]);
