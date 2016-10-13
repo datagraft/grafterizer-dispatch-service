@@ -2,7 +2,7 @@
 
 The Grafterizer dispatch service is a server component in the [DataGraft platform](https://datagraft.net/) that handles request authentication for [Grafterizer](https://github.com/datagraft/grafterizer) and dispatches requests for input and output across the multiple services.
 
-## Security <a name="security"></a>
+## <a name="security"></a>Security 
 To enable secure interaction with the [Grafterizer](https://github.com/datagraft/grafterizer) user interface, the dispatch service supports a set of features, which are briefly described in this section.
 
 The dispatch service uses **cookies** to store information about user sessions when interacting with [Grafterizer](https://github.com/datagraft/grafterizer). In order to prevent users from tampering with the session data, the service encrypts and signs the cookies using a *server key* specified in the environment of the server where the dispatch service is deployed.
