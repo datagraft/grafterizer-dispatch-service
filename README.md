@@ -18,7 +18,7 @@ The dispatch service uses the *[Node.js](https://nodejs.org)* runtime, version 4
 
 The component has been packaged in a [Docker](https://www.docker.com/) container and published on the official [DataGraft DockerHub](https://hub.docker.com/u/datagraft/).
 ### Other DataGraft components
-![](https://cloud.githubusercontent.com/assets/8124245/17170080/d9788f7a-53ea-11e6-8ed5-f79246be9581.png)
+![](https://cloud.githubusercontent.com/assets/8124245/17215977/1896e9aa-54df-11e6-9785-f49cab1e1714.png)
 
 ## Installation / Setup
 
@@ -27,7 +27,6 @@ The component has been packaged in a [Docker](https://www.docker.com/) container
  1. Install project dependencies using the Node package manager
    ```
    npm install
-
    ```
  1. Set the environmental variables for the service. That includes the setup for the [security](#security) features and the URLs (accessible over the Internet) of the DataGraft platform, [Grafterizer](https://github.com/datagraft/grafterizer), [Graftwerk](https://github.com/datagraft/graftwerk) (or [Graftwerk load balancer](https://github.com/datagraft/graftwerk-load-balancer)), and [Graftwerk cache](https://github.com/datagraft/graftwerk-cache).
  
