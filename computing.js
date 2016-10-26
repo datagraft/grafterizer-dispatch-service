@@ -121,6 +121,10 @@ module.exports = (app, settings) => {
     logging.error(message, data);
   };
 
+  // This regular expression is used to extract the ID
+  // from an upwizards distribution ID
+  const upwizardExtractIDRegex = /^upwizards--(\d+)$/;
+
   // Return a request to download the raw distribution
   // The stream can be transmitted directly to the client
   // or forwarded to Grafterizer
@@ -137,11 +141,20 @@ module.exports = (app, settings) => {
       return;
     }
 
+    // There is different kinds of files in Datagraft
+    // filestores files, and upwizards files.
+    // upwizards files are identified by a number
+    // if the distribution ID starts with upwizards--, 
+    // it means it's an upwizards file. Otherwise, it's a filestores file
+    // It should not be possible to create a filestores file with an ID starting
+    // with upwizards--
+    const matchUpwizardId = distribution.match(upwizardExtractIDRegex);
+
     // DataGraft query asking the attached file
     return request.get({
       // /attachement DataGraft's method redirects to the URL of the attachment
-      url: settings.datagraftUri + '/myassets/data_distributions/' +
-        encodeURIComponent(distribution) + '/attachment',
+      url: settings.datagraftUri + '/myassets/' + (matchUpwizardId ? 'upwizards' : 'filestores') + '/' +
+        encodeURIComponent(matchUpwizardId ? matchUpwizardId[1] : distribution) + '/attachment',
       headers: {
         // You need a valid authorization of course
         Authorization: getAuthorization(req)
