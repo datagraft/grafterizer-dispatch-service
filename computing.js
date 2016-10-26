@@ -332,6 +332,40 @@ module.exports = (app, settings) => {
     });
   };
 
+  const transformAndSaveTemporarilyDistribution = (req, res, distribution, transformation, type, callbackSuccess) =>  {
+    transformDistribution(req, res, distribution, transformation, type,
+      (resultStream, response, filename, type) => {
+        // If we are here and the status is not correct, we display the output
+        if (!response || response.statusCode !== 200) {
+          stream.pipe(res);
+          return;
+        }
+
+        // Create a temporary file to save the output from Graftwerk
+        // The problem is that Graftwerk doesn't send a content-length
+        // for RDF (only CSV), so we have to save it first before fowarding
+        // it to the next component
+        var tmpPath = temp.path('grafterizer-save', 's-');
+        /*jshint bitwise: false*/
+        var tmpWriteStream = fs.createWriteStream(tmpPath, {
+          flags: constants.O_CREAT | constants.O_TRUNC | constants.O_RDWR | constants.O_EXCL,
+          mode: '0600'
+        });
+        /*jshint bitwise: true*/
+
+        // Save in the temporary file
+        resultStream.pipe(tmpWriteStream);
+
+        // When the file has finished to be received from Graftwerk
+        tmpWriteStream.on('finish', () => {
+          callbackSuccess(tmpPath);
+        }).on('error', (err) => {
+          fs.unlink(tmpPath);
+          showAndLogError(res, 500, 'Error while transmitting the transformed data to the database', err);
+        });
+      });
+  };
+
   // Download the raw distribution file content
   // Graftwerk is not involved in the process
   app.get('/preview_raw/:distribution', (req, res) => {
@@ -477,65 +511,35 @@ module.exports = (app, settings) => {
           }
 
           // Execute the transformation
-          transformDistribution(req, res, distributionUri, transformationUri, 'graft',
-            (resultStream, response, filename, type) => {
+          transformAndSaveTemporarilyDistribution(req, res, distributionUri, transformationUri, 'graft',
+            (tmpPath) => {
 
-              // If we are here and the status is not correct, we display the output
-              if (!response || response.statusCode !== 200) {
-                stream.pipe(res);
-                return;
-              }
-
-              // Create a temporary file to save the output from Graftwerk
-              // The problem is that Graftwerk doesn't send a content-length
-              // for RDF (only CSV), so we have to save it first before fowarding
-              // it to the next component
-              var tmpPath = temp.path('grafterizer-save', 's-');
-              /*jshint bitwise: false*/
-              var tmpWriteStream = fs.createWriteStream(tmpPath, {
-                flags: constants.O_CREAT | constants.O_TRUNC | constants.O_RDWR | constants.O_EXCL,
-                mode: '0600'
+              // Save the stream in the database
+              var saveStream = request.post({
+                url: queriableDataStoreUri + '/statements',
+                headers: {
+                  Authorization: authorization,
+                  'Content-Type': 'text/x-nquads;charset=UTF-8'
+                },
               });
-              /*jshint bitwise: true*/
 
-              // Save in the temporary file
-              resultStream.pipe(tmpWriteStream);
+              // When the received the response, the database has received the file
+              saveStream.on('response', (response) => {
 
-              // When the file has finished to be received from Graftwerk
-              tmpWriteStream.on('finish', () => {
-
-                // Start to save it in the database
-                var saveStream = request.post({
-                  url: queriableDataStoreUri + '/statements',
-                  headers: {
-                    Authorization: authorization,
-                    'Content-Type': 'text/x-nquads;charset=UTF-8'
-                  },
-                });
-
-                // When the received the response, the database has received the file
-                saveStream.on('response', (response) => {
-
-                  // The file is deleted once it has been received
-                  fs.unlink(tmpPath);
-
-                  // Redirect the output from the database to the client
-                  // With ontotext, it's only a HTTP 204 OK, but it might contain
-                  // more information in the future.
-                  saveStream.pipe(res);
-
-                }).on('error', (err) => {
-                  fs.unlink(tmpPath);
-                  showAndLogError(res, 500, 'Error while transmitting the transformed data to the database', err);
-                });
-                
-                fs.createReadStream(tmpPath).pipe(saveStream);
-
-              }).on('error', (error) => {
+                // The file is deleted once it has been received
                 fs.unlink(tmpPath);
-                showAndLogError(res, 500, 'Error while receiving the transformed data', err);
-             });
 
+                // Redirect the output from the database to the client
+                // With ontotext, it's only a HTTP 204 OK, but it might contain
+                // more information in the future.
+                saveStream.pipe(res);
+
+              }).on('error', (err) => {
+                fs.unlink(tmpPath);
+                showAndLogError(res, 500, 'Error while transmitting the transformed data to the database', err);
+              });
+              
+              fs.createReadStream(tmpPath).pipe(saveStream);
             });
         });
       });
@@ -544,5 +548,59 @@ module.exports = (app, settings) => {
       return;
     }
 
+  });
+
+  // Transform a distribution using a transformation
+  // Saves the output in a wizard instance
+  app.post('/fillWizard', jsonParser, (req, res) => {
+    var transformationUri = req.body.transformation;
+    var distributionUri = req.body.distribution;
+    var wizardId = req.body.wizardId;
+    var transformationType = req.body.type;
+
+    if (!transformationUri) {
+      showAndLogError(res, 400, 'The transformation URI is missing');
+      return;
+    }
+
+    if (!distributionUri) {
+      showAndLogError(res, 400, 'The distribution URI is missing');
+      return;
+    }
+
+    if (!wizardId) {
+      showAndLogError(res, 400, 'The wizard ID is missing');
+      return;
+    }
+
+    if (!transformationType) {
+      showAndLogError(res, 400, 'The transformation type (pipe, graft) is missing');
+      return;
+    }
+
+    transformAndSaveTemporarilyDistribution(req, res, distributionUri, transformationUri, transformationType,
+      (tmpPath) => {
+        
+        // Save the stream in the upwizard object
+        var saveStream = request.put({
+          url: settings.datagraftUri + '/myassets/upwizards/save_transform/' + 
+            encodeURIComponent(wizardId),
+          headers: {
+            Authorization: getAuthorization(req)
+          },
+          formData: {
+            'upwizard[transformed_file]': fs.createReadStream(tmpPath)
+          }
+        });
+
+        saveStream.on('response', (response) => {
+          // The file is deleted once it has been received
+          fs.unlink(tmpPath);
+          saveStream.pipe(res);
+        }).on('error', (err) => {
+          fs.unlink(tmpPath);
+          showAndLogError(res, 500, 'Error while transmitting the transformed data back to Datagraft', err);
+        });
+      });
   });
 };
