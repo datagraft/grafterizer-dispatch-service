@@ -91,7 +91,7 @@ proxy.on('error', function(error, req, res) {
 });
 
 // Forward requests that match only this pattern
-const matchUriPattern = /^\/[^\/]+\/(utility_functions|queriable_data_stores|transformations|data_distributions)\/?/;
+const matchUriPattern = /^\/[^\/]+\/(utility_functions|queriable_data_stores|transformations|data_distributions|sparql_endpoints|filestores)\/?/;
 
 module.exports = (app, settings) => {
   app.use((req, res, next) => {

@@ -152,7 +152,7 @@ module.exports = (app, settings) => {
   };
 
   // Execute the transformation using Graftwerk
-  // The important thing to notice is that the data_distribution is
+  // The important thing to notice is that the filestores is
   // directly transferred from DataGraft to Graftwerk
   // This server never has the whole file in memory. It is only
   // working on streams and buffers. The advantage is that it requires
