@@ -589,6 +589,7 @@ module.exports = (app, settings) => {
             Authorization: getAuthorization(req)
           },
           formData: {
+            'upwizard[type_of_transformed_file]': transformationType,
             'upwizard[transformed_file]': fs.createReadStream(tmpPath)
           }
         });
