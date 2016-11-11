@@ -44,7 +44,14 @@ const jsonParser = bodyParser.json();
 
 // The .nt mimefile is not defined by default
 mime.define({
-  'application/n-triples': ['nt']
+  'application/n-triples': ['nt'],
+  'text/turtle': ['ttl'],
+  'application/rdf+xml': ['rdf'],
+  'application/n-quads': ['nq'],
+  'text/n3': ['n3'],
+  'application/trix': ['trix'],
+  'application/trig': ['trig'],
+  'application/ld+json': ['jsonld']
 });
 
 // Return the authorization token from the request
@@ -311,9 +318,9 @@ module.exports = (app, settings) => {
         showAndLogError(res, 500, 'Unable to load the transformation code', error);
         return;
       }
-
+    var acceptMimeType = mime.lookup(req.query.rdfFormat);
       executeTransformation(req, res, clojure, type,
-        (type === 'graft' ? 'application/n-triples' : 'application/csv'),
+        (type === 'graft' ? acceptMimeType : 'application/csv'),
         callbackSuccess,
         callbackError);
     });
@@ -378,8 +385,8 @@ module.exports = (app, settings) => {
           delete response.headers.server;
 
           if (type === 'graft') {
-            res.contentType('application/n-triples');
-            res.setHeader('content-disposition', 'attachment; filename=' + filename + '.nt');
+              res.contentType(mime.lookup(req.query.rdfFormat));
+              res.setHeader('content-disposition', 'attachment; filename=' + filename + '.' + req.query.rdfFormat);
           } else {
             res.contentType('text/csv');
             res.setHeader('content-disposition', 'attachment; filename=' + filename + '.csv');
