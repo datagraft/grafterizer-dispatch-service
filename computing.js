@@ -193,6 +193,9 @@ module.exports = (app, settings) => {
       // If the requests has failed, the request is just transferred to the client
       // so it can parse or display the DataGraft error
       if (!response || response.statusCode !== 200) {
+        // if not deleted, these headers are forwarded from the service, which could cause CORS errors
+        delete response.headers['access-control-allow-credentials'];
+        delete response.headers['access-control-allow-origin'];
         stream.pipe(res);
         return;
       }
@@ -397,7 +400,6 @@ module.exports = (app, settings) => {
   // The transformation code is sent by the client in the HTTP request body
   // The posted document should be formatted using JSON (and not the often default form-data)
   app.post('/preview/:distribution', jsonParser, (req, res) => {
-
     // Loading the clojure code from the request body
     const clojure = req.body && req.body.clojure;
 
