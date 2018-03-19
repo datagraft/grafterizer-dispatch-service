@@ -166,7 +166,7 @@ module.exports = (app, settings) => {
         // You need a valid authorization of course
         Authorization: getAuthorization(req)
       }
-    }).on('error', function(err) {
+    }).on('error', function (err) {
       showAndLogError(res, 500, 'Unable to download the data distribution', err);
     });
   };
@@ -242,7 +242,7 @@ module.exports = (app, settings) => {
       };
 
       // If a specific page is required, it is transmitted to Graftwerk
-      if (typeof req.query.page !== undefined) {
+      if (typeof req.query.page !== 'undefined') {
         formData.page = parseInt(req.query.page) || 0;
       }
 
@@ -262,7 +262,7 @@ module.exports = (app, settings) => {
         // /!\ This is mandatory to be able to send the file in a streaming mode
         'transfer-encoding': 'chuncked',
       };
-      
+
       if (acceptType) {
         headers.Accept = acceptType;
       }
@@ -285,7 +285,7 @@ module.exports = (app, settings) => {
           // Fetch the response string
           var outputError = concat({
             encoding: 'string',
-          }, function(graftwerkOutput) {
+          }, function (graftwerkOutput) {
 
             // Display the error, using the callback or the default system
             if (errorCallback) {
@@ -334,15 +334,16 @@ module.exports = (app, settings) => {
         showAndLogError(res, 500, 'Unable to load the transformation code', error);
         return;
       }
-    var acceptMimeType = mime.lookup(req.query.rdfFormat);
-      executeTransformation(req, res, clojure, type,
-        (type === 'graft' ? acceptMimeType : 'application/csv'),
-        callbackSuccess,
-        callbackError);
+      var acceptMimeType = 'application/n-triples';
+      if (req.query.rdfFormat) {
+        acceptMimeType = mime.lookup(req.query.rdfFormat);
+      }
+
+      executeTransformation(req, res, clojure, type, (type === 'graft' ? acceptMimeType : 'application/csv'), callbackSuccess, callbackError);
     });
   };
 
-  const transformAndSaveTemporarilyDistribution = (req, res, distribution, transformation, type, callbackSuccess) =>  {
+  const transformAndSaveTemporarilyDistribution = (req, res, distribution, transformation, type, callbackSuccess) => {
     transformDistribution(req, res, distribution, transformation, type,
       (resultStream, response, filename, type) => {
         // If we are here and the status is not correct, we display the output
@@ -434,8 +435,8 @@ module.exports = (app, settings) => {
           delete response.headers.server;
 
           if (type === 'graft') {
-              res.contentType(mime.lookup(req.query.rdfFormat));
-              res.setHeader('content-disposition', 'attachment; filename=' + filename + '.' + req.query.rdfFormat);
+            res.contentType(mime.lookup(req.query.rdfFormat));
+            res.setHeader('content-disposition', 'attachment; filename=' + filename + '.' + req.query.rdfFormat);
           } else {
             res.contentType('text/csv');
             res.setHeader('content-disposition', 'attachment; filename=' + filename + '.csv');
@@ -445,18 +446,18 @@ module.exports = (app, settings) => {
         stream.pipe(res);
       },
 
-    // Show the error in a slightly improved way
-    (message) => {
-      res.status(500);
+      // Show the error in a slightly improved way
+      (message) => {
+        res.status(500);
 
-      if (!req.query.raw) {
-        res.send(downloadErrorText.replace('{{OUTPUT}}', escape(message)));
-      } else {
-        res.json({
-          error: message
-        });
-      }
-    });
+        if (!req.query.raw) {
+          res.send(downloadErrorText.replace('{{OUTPUT}}', escape(message)));
+        } else {
+          res.json({
+            error: message
+          });
+        }
+      });
 
   });
 
@@ -547,7 +548,7 @@ module.exports = (app, settings) => {
                 fs.unlink(tmpPath);
                 showAndLogError(res, 500, 'Error while transmitting the transformed data to the database', err);
               });
-              
+
               fs.createReadStream(tmpPath).pipe(saveStream);
             });
         });
@@ -587,30 +588,28 @@ module.exports = (app, settings) => {
       return;
     }
 
-    transformAndSaveTemporarilyDistribution(req, res, distributionUri, transformationUri, transformationType,
-      (tmpPath) => {
-        
-        // Save the stream in the upwizard object
-        var saveStream = request.put({
-          url: settings.datagraftUri + '/myassets/upwizards/save_transform/' + 
-            encodeURIComponent(wizardId),
-          headers: {
-            Authorization: getAuthorization(req)
-          },
-          formData: {
-            'upwizard[type_of_transformed_file]': transformationType,
-            'upwizard[transformed_file]': fs.createReadStream(tmpPath)
-          }
-        });
-
-        saveStream.on('response', (response) => {
-          // The file is deleted once it has been received
-          fs.unlink(tmpPath);
-          saveStream.pipe(res);
-        }).on('error', (err) => {
-          fs.unlink(tmpPath);
-          showAndLogError(res, 500, 'Error while transmitting the transformed data back to Datagraft', err);
-        });
+    transformAndSaveTemporarilyDistribution(req, res, distributionUri, transformationUri, transformationType, (tmpPath) => {
+      // Save the stream in the upwizard object
+      var saveStream = request.put({
+        url: settings.datagraftUri + '/myassets/upwizards/save_transform/' +
+          encodeURIComponent(wizardId),
+        headers: {
+          Authorization: getAuthorization(req)
+        },
+        formData: {
+          'upwizard[type_of_transformed_file]': transformationType,
+          'upwizard[transformed_file]': fs.createReadStream(tmpPath)
+        }
       });
+
+      saveStream.on('response', (response) => {
+        // The file is deleted once it has been received
+        fs.unlink(tmpPath);
+        saveStream.pipe(res);
+      }).on('error', (err) => {
+        fs.unlink(tmpPath);
+        showAndLogError(res, 500, 'Error while transmitting the transformed data back to Datagraft', err);
+      });
+    });
   });
 };
