@@ -40,7 +40,7 @@ const constants = require('constants');
 const temp = require('temp');
 
 // Initializing the jsonParser
-const jsonParser = bodyParser.json();
+const jsonParser = bodyParser.json({limit: '5mb'});
 
 // The .nt mimefile is not defined by default
 mime.define({
